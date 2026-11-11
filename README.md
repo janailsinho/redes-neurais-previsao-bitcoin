@@ -1,11 +1,12 @@
 # 📈 Previsão de Preço de Bitcoin com LSTM e Otimização de Hiperparâmetros (Optuna)
 
-Projeto desenvolvido para a disciplina de Redes Neurais (**IF702 - CIn/UFPE**) pelos integrantes **Caio Ferreira** e **José Janailson**. O objetivo principal é desenvolver um modelo LSTM capaz de prever o preço de fechamento (`close`) do Bitcoin utilizando abordagens univariadas e multivariadas, otimização de hiperparâmetros via Optuna e validação temporal rigorosa.
+Repositório dedicado ao **Mini-projeto com LSTMs** da disciplina de Redes Neurais (**IF702 - CIn/UFPE**), desenvolvido pelos integrantes **Caio Ferreira** e **José Janailson**. O objetivo principal é implementar, treinar e otimizar redes neurais recorrentes baseadas em LSTM para prever a cotação de fechamento (`close`) do Bitcoin utilizando dados históricos (2017–2023).
 
 ---
 
 ## 📋 Sumário
 - [Visão Geral do Projeto](#-visão-geral-do-projeto)
+- [Diretrizes Oficiais do Mini-Projeto](#-diretrizes-oficiais-do-mini-projeto)
 - [Estrutura e Divisão dos Dados](#-estrutura-e-divisão-dos-dados)
 - [Métricas Utilizadas](#-métricas-utilizadas)
 - [Evolução dos Experimentos e Modelos](#-evolução-dos-experimentos-e-modelos)
@@ -21,48 +22,51 @@ Projeto desenvolvido para a disciplina de Redes Neurais (**IF702 - CIn/UFPE**) p
 ---
 
 ## 🚀 Visão Geral do Projeto
-A predição de preços de criptomoedas apresenta grande complexidade devido à alta volatilidade e forte autocorrelação temporal. Este repositório documenta a evolução experimental de redes neurais recorrentes (LSTM) aplicadas ao histórico diário du Bitcoin entre os anos de 2017 e 2023.
+A predição de séries temporais financeiras apresenta alta complexidade e volatilidade. Seguindo as diretrizes do mini-projeto, este trabalho explora desde implementações univariadas baseadas em tutoriais de referência até abordagens multivariadas avançadas com sintonia de hiperparâmetros auxiliada pelo **Optuna**, garantindo o respeito estrito à ordem cronológica dos dados sem vazamento de informação futura.
+
+---
+
+## 📐 Diretrizes Oficiais do Mini-Projeto
+- **Janela de Dados:** Embora o histórico geral do Bitcoin abarque períodos anteriores, o escopo oficial do mini-projeto utiliza os dados compreendidos estritamente entre **2017 e 2023**.
+- **Restrição Temporal:** Apenas os dados até o dia atual ($D$) devem ser empregados para prever o fechamento do dia seguinte ($D+1$), evitando o uso indevido de variáveis futuras do mesmo dia (como o preço de abertura do dia seguinte).
 
 ---
 
 ## 📊 Estrutura e Divisão dos Dados
-- **Dataset:** `data-bitcoin_timedata_v2.csv` (contendo colunas como `date`, `open`, `high`, `low`, `close` e `number_of_trades`).
-- **Divisão dos Dados:** 
-  - **Treino:** 80% do histórico.
-  - **Teste:** 20% do histórico.
-- **Janela Temporal (`window_size`):** O modelo consome uma sequência de dias $D$ para prever o fechamento do dia seguinte $D+1$.
+- **Dataset:** `data-bitcoin_timedata_v2.csv` (`date`, `open`, `high`, `low`, `close`, `number_of_trades`).
+- **Divisão Temporal:** 
+  - **Treino:** Primeiros 80% dos registros.
+  - **Teste:** 20% restantes (mais recentes).
+- **Janela Temporal (`window_size`):** Sequência de dias passados utilizada para inferir o próximo ponto da série.
 
 ---
 
 ## 📐 Métricas de Avaliação
-- **MSE (Mean Squared Error):** Média dos quadrados dos erros, penalizando erros maiores.
-- **RMSE (Root Mean Squared Error):** Raiz quadrada du MSE, expressando o erro médio na mesma unidade da variável.
-- **MAE (Mean Absolute Error):** Média dos erros absolutos (magnitude do erro sem considerar direções).
-- **$R^2$ (Coeficiente de Determinação):** Mede o quanto da variabilidade e comportamento dos dados reais o modelo conseguiu capturar.
-- **POCID (Percentage of Correct Direction):** Percentual de acertos na direção da variação (subida/queda) de um dia para o outro.
+- **MSE / RMSE / MAE:** Avaliam a magnitude dos erros de previsão de preço em valores absolutos ou escalados.
+- **$$R^2$$ (Coeficiente de Determinação):** Mede a aderência do modelo à variabilidade dos dados reais.
+- **POCID (Percentage of Correct Direction):** Métrica fundamental exigida no projeto que computa a assertividade do modelo em prever a direção correta da variação diária (subida ou queda da cotação).
 
 ---
 
 ## 🔬 Evolução dos Experimentos e Modelos
 
 ### 1. Modelo Base (Univariado + StandardScaler)
-- **Configuração:** Uso exclusivo da coluna `close`, normalizada com `StandardScaler` (centralizada em zero, ajuste feito estritamente sobre os dados de treino).
-- **Desempenho:** Apresentou $R^2$ elevado (~0.9784) devido à autocorrelação, mas com tempo de treinamento estendido e **POCID de 47.54%**.
+- **Configuração:** Uso exclusivo da coluna `close`, normalizada via `StandardScaler` ajustado estritamente sobre o conjunto de treino.
+- **Desempenho:** Apresentou um $$R^2$$ elevado (~0.9784) devido à forte autocorrelação da série, mas com **POCID de 47.54%** (próximo a escolhas aleatórias de direção).
 
 ### 2. Mudança de Scaler (`MinMaxScaler`)
 - **Configuração:** Substituição do `StandardScaler` por `MinMaxScaler(feature_range=(-1, 1))`.
-- **Motivo:** Alinhar a escala dos dados com o intervalo da função de ativação interna `tanh` da LSTM, facilitando a convergência e agilizando o treinamento.
-- **Desempenho:** MSE de 0.0010, $R^2$ de 0.9503 e **POCID de 49.18%**.
+- **Motivo:** Alinhar os dados ao intervalo da função de ativação interna `tanh` da camada LSTM, beneficiando a convergência.
+- **Desempenho:** MSE de 0.0010, $$R^2$$ de 0.9503 e **POCID de 49.18%**.
 
 ### 3. Abordagem Multivariada Inicial
-- **Configuração:** Inclusão de mais features além do fechamento: `open`, `high`, `low`, `close` e `number_of_trades`.
-- **Desempenho:** Permitiu que a rede analise mais contexto sobre o comportamento do mercado.
+- **Configuração:** Inclusão de variáveis exógenas (`open`, `high`, `low`, `close`, `number_of_trades`) para fornecer mais contexto de mercado à rede.
 
 ### 4. Implementação Keras LSTM com Dropout e EarlyStopping
-- Criação de uma arquitetura Keras otimizada, integrando `EarlyStopping` para evitar overfitting, camadas de `Dropout`, e ajustes no tamanho da janela temporal e taxa de aprendizado.
+- Estruturação robusta em Keras utilizando camadas densas, dropout para controle de regularização contra *overfitting* e *callbacks* de parada antecipada.
 
 ### 5. Otimização Avançada com Optuna (Modelo Final)
-O **Optuna** foi utilizado para varrer o espaço de hiperparâmetros e encontrar a configuração ideal para o modelo multivariado:
+Busca automatizada de hiperparâmetros ótimos para a arquitetura multivariada:
 * **`window_size`**: 24 dias
 * **`units`**: 60 neurônios
 * **`n_layers`**: 1 camada LSTM
@@ -76,21 +80,21 @@ O **Optuna** foi utilizado para varrer o espaço de hiperparâmetros e encontrar
 - **MSE (Teste):** 0.001096
 - **RMSE (Teste):** 0.033107
 - **MAE (Teste):** 0.026437
-- **$R^2$ (Teste):** 0.941953
+- **$$R^2$$ (Teste):** 0.941953
 - **POCID (Teste):** **48.05%**
 
 ---
 
 ## 💡 Principais Conclusões
-1. **$R^2$ Alto vs. POCID Neutro:** O modelo final tornou-se excelente em rastrear o nível do preço ($R^2 > 0.94$), mas manteve um POCID em torno de ~48-50%. Isso ocorre porque o preço de amanhã possui forte correlação com o preço de hoje (persistência temporal).
-2. **Impacto da Abordagem Multivariada + Optuna:** A estratégia multivariada aliada à busca de hiperparâmetros evitou que o modelo caísse em um comportamento ativamente errado ($\text{POCID} < 45\%$), mantendo-o estável, embora ainda precise de novas features preditivas para antecipar reversões bruscas de tendência com precisão.
+1. **$$R^2$$ Alto vs. POCID Neutro:** O modelo obteve excelente desempenho em rastrear a escala do preço absoluto ($R^2 > 0.94$), mas manteve o POCID próximo a 48–50%. Isso evidencia a forte autocorrelação do ativo (o preço de amanhã tende a ser muito parecido com o de hoje), demonstrando que prever a **direção exata** da mudança diária permanece como o principal desafio em modelos puramente supervisionados de regressão temporal.
+2. **Impacto da Abordagem Multivariada + Optuna:** A sintonia de parâmetros via Optuna evitou que o modelo gerasse previsões ativamente distorcidas ($\text{POCID} < 45\%$), mantendo-o estável e alinhado ao comportamento de persistência do mercado.
 
 ---
 
 ## 🛠️ Tecnologias Utilizadas
 - **Python**
 - **TensorFlow / Keras** (Redes Neurais LSTM)
-- **Scikit-Learn** (`MinMaxScaler`, métricas de erro)
+- **Scikit-Learn** (`MinMaxScaler`, métricas estatísticas)
 - **Optuna** (Otimização de Hiperparâmetros)
 - **Pandas & NumPy** (Manipulação de Séries Temporais)
-- **Matplotlib** (Visualização de Dados e Gráficos de Previsão)
+- **Matplotlib** (Visualização gráfica dos resultados de treino e teste)
